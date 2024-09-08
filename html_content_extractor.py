@@ -90,7 +90,7 @@ class HTMLContentExtractor:
             img = element.find('img')
             if img:
                 img_content = self._extract_image(img, base_url)
-                content = f"{content}\n\n{img_content}"
+                content = f"{content}\n\n{img_content}".strip()
             return f"{content}\n\n"
         elif element.name in ['ul', 'ol']:
             content = ""
