@@ -6,7 +6,8 @@ if __name__ == "__main__":
     extractor.load_model('vectorizer.pkl', 'classifier.pkl')
 
     # Example URL (replace with a real article URL)
-    url = "https://gloridust.xyz/blog/2024-06-29-overseas-bank-card-wise+ocbc"
+    # url = "https://gloridust.xyz/blog/2024-06-29-overseas-bank-card-wise+ocbc"
+    url=input("URL:")
 
     try:
         # Extract content from the URL
