@@ -81,33 +81,41 @@ class HTMLContentExtractor:
     def _extract_structured_content(self, element, base_url, level=0):
         if element is None:
             return ""
+        if isinstance(element, str):
+            return element.strip() + "\n"
         if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             return f"{'#' * (int(element.name[1]) + level)} {element.get_text().strip()}\n"
         elif element.name == 'p':
-            return f"{element.get_text().strip()}\n"
+            content = element.get_text().strip()
+            img = element.find('img')
+            if img:
+                img_content = self._extract_image(img, base_url)
+                content = f"{content}\n\n{img_content}"
+            return f"{content}\n\n"
         elif element.name in ['ul', 'ol']:
             content = ""
             for li in element.find_all('li', recursive=False):
                 content += f"{'  ' * level}- {li.get_text().strip()}\n"
-            return content
+            return content + "\n"
         elif element.name == 'blockquote':
-            return f"> {element.get_text().strip()}\n"
+            return f"> {element.get_text().strip()}\n\n"
         elif element.name == 'img':
-            src = element.get('src')
-            if src:
-                full_url = urljoin(base_url, src)
-                alt = element.get('alt', '')
-                return f"![{alt}]({full_url})\n"
+            return self._extract_image(element, base_url)
         elif element.name in ['pre', 'code']:
-            return f"```\n{element.get_text().strip()}\n```\n"
+            return f"```\n{element.get_text().strip()}\n```\n\n"
         else:
             content = ""
             for child in element.children:
-                if child.name:
-                    content += self._extract_structured_content(child, base_url, level)
-                elif isinstance(child, str) and child.strip():
-                    content += child.strip() + "\n"
+                content += self._extract_structured_content(child, base_url, level)
             return content
+
+    def _extract_image(self, img, base_url):
+        src = img.get('src')
+        if src:
+            full_url = urljoin(base_url, src)
+            alt = img.get('alt', '')
+            return f"![{alt}]({full_url})\n\n"
+        return ""
 
 def format_as_markdown(extracted_content):
     md = f"# {extracted_content['title']}\n\n"
