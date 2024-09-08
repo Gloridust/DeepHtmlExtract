@@ -40,24 +40,21 @@ class HTMLContentExtractor:
         date = soup.find('meta', {'property': 'article:published_time'})
         date = date['content'] if date else ""
 
-        main_content = self._extract_main_content(soup)
-
-        images = self._extract_images(soup, url)
+        main_content = self._extract_main_content(soup, url)
 
         return {
             'title': title,
             'author': author,
             'date': date,
-            'content': main_content,
-            'images': images
+            'content': main_content
         }
 
-    def _extract_main_content(self, soup):
+    def _extract_main_content(self, soup, base_url):
         for script in soup(["script", "style"]):
             script.decompose()
 
-        # Extract content with structure
-        content = self._extract_structured_content(soup.body)
+        # Extract content with structure and images
+        content = self._extract_structured_content(soup.body, base_url)
 
         # Classify each paragraph
         paragraphs = content.split('\n')
@@ -65,11 +62,11 @@ class HTMLContentExtractor:
         labels = self.classifier.predict(X)
 
         # Keep only the paragraphs classified as main content
-        main_content = [p for p, label in zip(paragraphs, labels) if label == 'main_content']
+        main_content = [p for p, label in zip(paragraphs, labels) if label == 'main_content' or p.startswith('![')]
 
         return '\n'.join(main_content)
 
-    def _extract_structured_content(self, element, level=0):
+    def _extract_structured_content(self, element, base_url, level=0):
         if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             return f"{'#' * (int(element.name[1]) + level)} {element.get_text().strip()}\n"
         elif element.name == 'p':
@@ -81,22 +78,18 @@ class HTMLContentExtractor:
             return content
         elif element.name == 'blockquote':
             return f"> {element.get_text().strip()}\n"
+        elif element.name == 'img':
+            src = element.get('src')
+            if src:
+                full_url = urljoin(base_url, src)
+                alt = element.get('alt', '')
+                return f"![{alt}]({full_url})\n"
         else:
             content = ""
             for child in element.children:
                 if child.name:
-                    content += self._extract_structured_content(child, level)
+                    content += self._extract_structured_content(child, base_url, level)
             return content
-
-    def _extract_images(self, soup, base_url):
-        images = []
-        for img in soup.find_all('img'):
-            src = img.get('src')
-            if src:
-                full_url = urljoin(base_url, src)
-                alt = img.get('alt', '')
-                images.append({'url': full_url, 'alt': alt})
-        return images
 
 def format_as_markdown(extracted_content):
     md = f"# {extracted_content['title']}\n\n"
@@ -107,11 +100,6 @@ def format_as_markdown(extracted_content):
     if extracted_content['date']:
         md += f"**Date:** {extracted_content['date']}\n\n"
     
-    md += extracted_content['content'] + "\n\n"
-    
-    if extracted_content['images']:
-        md += "## Images\n\n"
-        for img in extracted_content['images']:
-            md += f"![{img['alt']}]({img['url']})\n\n"
+    md += extracted_content['content']
     
     return md
