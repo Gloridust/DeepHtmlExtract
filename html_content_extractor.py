@@ -56,18 +56,37 @@ class HTMLContentExtractor:
         for script in soup(["script", "style"]):
             script.decompose()
 
-        text = soup.get_text()
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = '\n'.join(chunk for chunk in chunks if chunk)
+        # Extract content with structure
+        content = self._extract_structured_content(soup.body)
 
-        paragraphs = text.split('\n')
+        # Classify each paragraph
+        paragraphs = content.split('\n')
         X = self.vectorizer.transform(paragraphs)
         labels = self.classifier.predict(X)
 
+        # Keep only the paragraphs classified as main content
         main_content = [p for p, label in zip(paragraphs, labels) if label == 'main_content']
 
-        return '\n\n'.join(main_content)
+        return '\n'.join(main_content)
+
+    def _extract_structured_content(self, element, level=0):
+        if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+            return f"{'#' * (int(element.name[1]) + level)} {element.get_text().strip()}\n"
+        elif element.name == 'p':
+            return f"{element.get_text().strip()}\n"
+        elif element.name in ['ul', 'ol']:
+            content = ""
+            for li in element.find_all('li', recursive=False):
+                content += f"{'  ' * level}- {li.get_text().strip()}\n"
+            return content
+        elif element.name == 'blockquote':
+            return f"> {element.get_text().strip()}\n"
+        else:
+            content = ""
+            for child in element.children:
+                if child.name:
+                    content += self._extract_structured_content(child, level)
+            return content
 
     def _extract_images(self, soup, base_url):
         images = []
