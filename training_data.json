@@ -1,0 +1,34 @@
+[
+    {
+        "text": "This is the main content of the article. It contains important information about the topic at hand.",
+        "label": "main_content"
+    },
+    {
+        "text": "The article discusses various aspects of machine learning and its applications in natural language processing.",
+        "label": "main_content"
+    },
+    {
+        "text": "Key points are elaborated in this section, providing readers with a comprehensive understanding of the subject matter.",
+        "label": "main_content"
+    },
+    {
+        "text": "The author presents their arguments and supporting evidence, offering a well-rounded perspective on the topic.",
+        "label": "main_content"
+    },
+    {
+        "text": "This is a comment left by a reader. It doesn't contribute to the main content of the article.",
+        "label": "not_main_content"
+    },
+    {
+        "text": "Advertisement: Buy our products now! Limited time offer!",
+        "label": "not_main_content"
+    },
+    {
+        "text": "Related articles you might be interested in: '10 Tips for Better Writing', 'The Future of AI'",
+        "label": "not_main_content"
+    },
+    {
+        "text": "Footer: Copyright 2024. All rights reserved. Terms of Service | Privacy Policy",
+        "label": "not_main_content"
+    }
+]
