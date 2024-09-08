@@ -5,6 +5,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from urllib.parse import urljoin
 import pickle
+from dateutil import parser
+from datetime import datetime
 
 class HTMLContentExtractor:
     def __init__(self):
@@ -34,11 +36,8 @@ class HTMLContentExtractor:
 
         title = soup.title.string if soup.title else ""
 
-        author = soup.find('meta', {'name': 'author'})
-        author = author['content'] if author else ""
-
-        date = soup.find('meta', {'property': 'article:published_time'})
-        date = date['content'] if date else ""
+        author = self._extract_author(soup)
+        date = self._extract_date(soup)
 
         main_content = self._extract_main_content(soup, url)
 
@@ -48,6 +47,58 @@ class HTMLContentExtractor:
             'date': date,
             'content': main_content
         }
+
+    def _extract_author(self, soup):
+        author = soup.find('meta', {'name': 'author'})
+        if author:
+            return author['content']
+        
+        # Try to find author in common locations
+        author_elements = soup.find_all(['span', 'div', 'p'], class_=lambda x: x and 'author' in x.lower())
+        for element in author_elements:
+            return element.get_text().strip()
+        
+        return ""
+
+    def _extract_date(self, soup):
+        def parse_and_format_date(date_str):
+            try:
+                parsed_date = parser.parse(date_str)
+                return parsed_date.strftime('%Y-%m-%d')
+            except ValueError:
+                return None
+
+        # Try meta tags first
+        date_meta = soup.find('meta', {'property': 'article:published_time'}) or \
+                    soup.find('meta', {'name': 'pubdate'}) or \
+                    soup.find('meta', {'name': 'date'})
+        if date_meta:
+            formatted_date = parse_and_format_date(date_meta['content'])
+            if formatted_date:
+                return formatted_date
+
+        # Look for common date patterns in the text
+        date_patterns = [
+            r'\d{1,2}/\d{1,2}/\d{4}',  # MM/DD/YYYY or DD/MM/YYYY
+            r'\d{4}-\d{2}-\d{2}',      # YYYY-MM-DD
+            r'\d{1,2}\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s\d{4}',  # DD Mon YYYY
+        ]
+
+        for pattern in date_patterns:
+            date_match = re.search(pattern, soup.get_text())
+            if date_match:
+                formatted_date = parse_and_format_date(date_match.group())
+                if formatted_date:
+                    return formatted_date
+
+        # Look for elements with date-related classes or IDs
+        date_elements = soup.find_all(['span', 'div', 'p'], class_=lambda x: x and 'date' in x.lower())
+        for element in date_elements:
+            formatted_date = parse_and_format_date(element.get_text().strip())
+            if formatted_date:
+                return formatted_date
+
+        return ""
 
     def _extract_main_content(self, soup, base_url):
         for script in soup(["script", "style"]):
