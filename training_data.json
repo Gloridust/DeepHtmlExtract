@@ -30,5 +30,21 @@
     {
         "text": "Footer: Copyright 2024. All rights reserved. Terms of Service | Privacy Policy",
         "label": "not_main_content"
+    },
+    {
+        "text": "Home About Contact",
+        "label": "not_main_content"
+    },
+    {
+        "text": "首页 关于 友链 Language",
+        "label": "not_main_content"
+    },
+    {
+        "text": "Navigation: Home Products Services About Us",
+        "label": "not_main_content"
+    },
+    {
+        "text": "Menu: File Edit View Help",
+        "label": "not_main_content"
     }
 ]

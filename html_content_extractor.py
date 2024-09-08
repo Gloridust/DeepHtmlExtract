@@ -9,7 +9,7 @@ import pickle
 class HTMLContentExtractor:
     def __init__(self):
         self.vectorizer = TfidfVectorizer(stop_words='english')
-        self.classifier = MultinomialNB()
+        self.classifier = MultinomialNB(alpha=0.1)  # Decreased alpha for less smoothing
 
     def train(self, training_data):
         X = self.vectorizer.fit_transform([item['text'] for item in training_data])
@@ -53,20 +53,34 @@ class HTMLContentExtractor:
         for script in soup(["script", "style"]):
             script.decompose()
 
+        # Remove obvious navigation elements
+        for nav in soup.find_all(['nav', 'header', 'footer']):
+            nav.decompose()
+
+        # Try to find the main content area
+        main_content_area = soup.find('article') or soup.find('main') or soup.find('div', class_='content') or soup.body
+
         # Extract content with structure and images
-        content = self._extract_structured_content(soup.body, base_url)
+        content = self._extract_structured_content(main_content_area, base_url)
 
         # Classify each paragraph
         paragraphs = content.split('\n')
         X = self.vectorizer.transform(paragraphs)
-        labels = self.classifier.predict(X)
+        probabilities = self.classifier.predict_proba(X)
 
-        # Keep only the paragraphs classified as main content
-        main_content = [p for p, label in zip(paragraphs, labels) if label == 'main_content' or p.startswith('![')]
+        # Keep paragraphs classified as main content or with high probability
+        main_content = []
+        for p, prob in zip(paragraphs, probabilities):
+            if prob[1] > 0.3 or p.strip().startswith(('#', '![', '```')):  # Adjusted threshold
+                main_content.append(p)
+            elif len(p.split()) > 20:  # Keep longer paragraphs
+                main_content.append(p)
 
         return '\n'.join(main_content)
 
     def _extract_structured_content(self, element, base_url, level=0):
+        if element is None:
+            return ""
         if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             return f"{'#' * (int(element.name[1]) + level)} {element.get_text().strip()}\n"
         elif element.name == 'p':
@@ -84,11 +98,15 @@ class HTMLContentExtractor:
                 full_url = urljoin(base_url, src)
                 alt = element.get('alt', '')
                 return f"![{alt}]({full_url})\n"
+        elif element.name in ['pre', 'code']:
+            return f"```\n{element.get_text().strip()}\n```\n"
         else:
             content = ""
             for child in element.children:
                 if child.name:
                     content += self._extract_structured_content(child, base_url, level)
+                elif isinstance(child, str) and child.strip():
+                    content += child.strip() + "\n"
             return content
 
 def format_as_markdown(extracted_content):
