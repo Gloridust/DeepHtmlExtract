@@ -5,7 +5,7 @@ if __name__ == "__main__":
     extractor = HTMLContentExtractor()
     extractor.load_model('vectorizer.pkl', 'classifier.pkl')
 
-    # Example URL (replace with a real article URL)
+    # Example URL
     # url = "https://gloridust.xyz/blog/2024-06-29-overseas-bank-card-wise+ocbc"
     url=input("URL:")
 
